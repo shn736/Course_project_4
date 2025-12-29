@@ -1,5 +1,3 @@
-from tkinter.scrolledtext import example
-
 from django.core.management import BaseCommand
 
 from users.models import User

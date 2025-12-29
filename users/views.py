@@ -1,18 +1,15 @@
 import secrets
+
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
-from django.views.generic import (
-    CreateView,
-    DetailView,
-    UpdateView,
-)
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from config.settings import EMAIL_HOST_USER
-from users.forms import UserRegisterForm
+from users.forms import UserManagersForm, UserRegisterForm
 from users.models import User
-
 
 
 class UserCreateView(CreateView):
@@ -43,11 +40,29 @@ def email_verification(request, token):
     user.save()
     return redirect(reverse("users:login"))
 
+
 class UserDetailView(DetailView):
     model = User
     template_name = "../templates/MailingListManagement/user_detail.html"
 
+
 class UserUpdateView(LoginRequiredMixin, UpdateView):
     model = User
-    template_name = "../templates/MailingListManagement/users/user_form.html"
+    template_name = "user_form.html"
     success_url = reverse_lazy("mailing_list_management:home")
+
+    def get_form_class(self):
+        user = self.request.user
+        if user.has_perm("catalog.can_unpublish_product"):
+            return UserManagersForm
+        raise PermissionDenied
+
+
+class UserListView(ListView):
+    model = User
+    template_name = "user_list.html"
+
+    def get_queryset(self):
+        if self.request.user.has_perm("can_view_mailing"):
+            return User.objects.all()
+        raise PermissionDenied
